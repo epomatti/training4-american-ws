@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="3048b0de-b071-4191-a169-255d73878efc" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="b24dbdc8-bcb9-4568-9e53-f06b7cf62f22" >
+		<db:my-sql-connection host="mudb.learn.mulesoft.com" port="3306" user="mule" password="mule" database="training" />
+	</db:config>
+	<flow name="getFlight" doc:id="8c0e3b9a-6610-40f9-bb2a-630c97b6ec9e" >
+		<http:listener doc:name="Listener" doc:id="47be5404-1a57-4e7d-b03f-a1a12f776e54" config-ref="HTTP_Listener_config" path="/flights" allowedMethods="GET"/>
+		<db:select doc:name="Select" doc:id="6ba904ab-112b-48f7-90cb-a669c42e78f9" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from american]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="36d41e61-cd79-4fb1-a47a-ca59a631f781" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map ( payload01 , indexOfPayload01 ) -> {
+	ID: payload01.ID,
+	code: (payload01.code1 default "") ++ (payload01.code2 default ""),
+	price: payload01.price default 0,
+	departureDate: payload01.takeOffDate as String default "",
+	origin: payload01.fromAirport default "",
+	destination: payload01.toAirport default "",
+	emptySeats: payload01.seatsAvailable default 0,
+	plane: {
+		"type": payload01.planeType default "",
+		totalSeats: payload01.totalSeats default 0
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="getFlightsByID" doc:id="51e2a769-9b90-4a04-8ce9-d8bac8cf27ed" >
+		<http:listener doc:name="Copy_of_Listener" doc:id="fb86f9aa-3384-4c59-9aeb-c494e77a7479" config-ref="HTTP_Listener_config" path="/flights/{ID}" allowedMethods="GET" />
+		<db:select doc:name="Copy_of_Select" doc:id="3847532e-c62f-495c-8015-75ecb9f27e6c" config-ref="Database_Config" >
+			<db:sql ><![CDATA[select *
+from american
+where ID = :ID]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{'ID' : attributes.uriParams.ID}]]]></db:input-parameters>
+		</db:select>
+		<ee:transform doc:name="Copy_of_Transform Message" doc:id="3f751131-7276-4231-b622-ef858d6997d7" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map ( payload01 , indexOfPayload01 ) -> {
+	ID: payload01.ID,
+	code: (payload01.code1 default "") ++ (payload01.code2 default ""),
+	price: payload01.price default 0,
+	departureDate: payload01.takeOffDate as String default "",
+	origin: payload01.fromAirport default "",
+	destination: payload01.toAirport default "",
+	emptySeats: payload01.seatsAvailable default 0,
+	plane: {
+		"type": payload01.planeType default "",
+		totalSeats: payload01.totalSeats default 0
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="postFlight" doc:id="ce3da52c-0142-4cd2-805f-203b4c7098a4" >
+		<http:listener doc:name="Listener" doc:id="663ad84b-9112-4c79-8de6-c7429497ade3" config-ref="HTTP_Listener_config" path="/flights" allowedMethods="POST"/>
+		<set-payload value='{"message": "Flight added (but not really)"}' doc:name="Set Payload" doc:id="4abd832a-bbeb-44ca-9d95-a4b330816571" />
+	</flow>
+</mule>
